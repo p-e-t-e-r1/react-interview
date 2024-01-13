@@ -2,8 +2,9 @@ import React from 'react'
 import { Combobox, Dialog, Transition } from '@headlessui/react'
 import { RepositoryOption } from './RepositoryOption'
 import { FaceSmileIcon, MagnifyingGlassIcon } from '@heroicons/react/20/solid'
+import { useRequest } from 'ahooks'
 
-type Repository = {
+export type Repository = {
   id: string
   name: string
   full_name: string
@@ -33,6 +34,14 @@ export default function Example() {
 
   const [rawQuery, setRawQuery] = React.useState('')
   const query = rawQuery.toLowerCase().replace(/^[#>]/, '')
+
+  async function getData(search?: string): Promise<APIResponse> {
+    return fetch(`api/search?q=${search}`).then((r) => r.json())
+  }
+  const { data, loading, run } = useRequest(getData, {
+    debounceWait: 1000,
+    manual: true,
+  })
 
   return (
     <Transition.Root
@@ -64,7 +73,7 @@ export default function Example() {
             leaveFrom="opacity-100 scale-100"
             leaveTo="opacity-0 scale-95"
           >
-            <Dialog.Panel className="mx-auto max-w-xl transform divide-y divide-gray-500 divide-opacity-20 overflow-hidden rounded-2xl shadow-slate-300/10 bg-slate-900/70 shadow-2xl ring-1 ring-sky-500 ring-opacity-5 backdrop-blur-xl backdrop-filter transition-all">
+            <Dialog.Panel className="mx-auto max-w-xl transform divide-y divide-gray-500 divide-opacity-20 overflow-hidden rounded-2xl bg-slate-900/70 shadow-2xl shadow-slate-300/10 ring-1 ring-sky-500 ring-opacity-5 backdrop-blur-xl backdrop-filter transition-all">
               <Combobox
                 value=""
                 onChange={(item) => {
@@ -73,13 +82,18 @@ export default function Example() {
               >
                 <div className="relative">
                   <MagnifyingGlassIcon
-                    className="pointer-events-none absolute top-3.5 left-4 h-5 w-5 text-gray-500"
+                    className="pointer-events-none absolute left-4 top-3.5 h-5 w-5 text-gray-500"
                     aria-hidden="true"
                   />
                   <Combobox.Input
-                    className="h-12 w-full border-0 bg-transparent pl-11 pr-4 text-gray-100 placeholder-gray-500 focus:ring-0 sm:text-sm focus:outline-0"
+                    className="h-12 w-full border-0 bg-transparent pl-11 pr-4 text-gray-100 placeholder-gray-500 focus:outline-0 focus:ring-0 sm:text-sm"
                     placeholder="Search GitHub repos..."
-                    onChange={(event) => setRawQuery(event.target.value)}
+                    value={rawQuery}
+                    onChange={(event) => {
+                      const value = event.target.value
+                      setRawQuery(value)
+                      if (value) run(value)
+                    }}
                   />
                 </div>
 
@@ -91,15 +105,15 @@ export default function Example() {
                     <h2 className="text-xs font-semibold text-gray-200">
                       Repositories
                     </h2>
-                    <ul className="-mx-4 mt-2 text-sm text-gray-700 space-y-0.5">
-                      <RepositoryOption />
-                      <RepositoryOption />
-                      <RepositoryOption />
+                    <ul className="-mx-4 mt-2 space-y-0.5 text-sm text-gray-700">
+                      {(data?.items || []).map((e) => (
+                        <RepositoryOption key={e.id} {...e} />
+                      ))}
                     </ul>
                   </li>
                 </Combobox.Options>
-                <span className="flex flex-wrap items-center bg-slate-900/20 py-2.5 px-4 text-xs text-gray-400">
-                  <FaceSmileIcon className="w-4 h-4 mr-1" />
+                <span className="flex flex-wrap items-center bg-slate-900/20 px-4 py-2.5 text-xs text-gray-400">
+                  <FaceSmileIcon className="mr-1 h-4 w-4" />
                   Welcome to Zolplay&apos;s React Interview Challenge.
                 </span>
               </Combobox>
